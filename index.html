@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ХАЙРЫН САЯТАН - Маргад & Намуунаа</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;800&family=Pacifico&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root { --p-pink: #FFD1DC; --d-rose: #C2185B; }
+        body { font-family: 'Montserrat', sans-serif; background-color: var(--p-pink); color: #333; user-select: none; }
+        .fancy-font { font-family: 'Pacifico', cursive; }
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .prize-active { background-color: var(--d-rose) !important; color: white !important; transform: scale(1.05); box-shadow: 0 4px 15px rgba(194, 24, 91, 0.4); }
+        .threshold { border-left: 6px solid var(--d-rose); font-weight: 800; color: #111; }
+        .option-btn { transition: all 0.2s; border: 2px solid #f3f4f6; text-align: left; padding: 1rem; border-radius: 1rem; font-weight: 600; width: 100%; }
+        .option-btn:hover:not(:disabled) { border-color: var(--d-rose); background-color: #fff1f2; }
+        #certificate-card { background: white; background-image: radial-gradient(#ffe4e6 1.5px, transparent 1.5px); background-size: 20px 20px; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-2 md:p-4">
+
+    <!-- ЭХЛЭЛ ХЭСЭГ -->
+    <div id="start-screen" class="max-w-md w-full bg-white/95 backdrop-blur-md p-8 md:p-10 rounded-[2.5rem] shadow-2xl text-center fade-in">
+        <h1 class="fancy-font text-5xl text-rose-600 mb-2">💖 Хайрын Саятан</h1>
+        <p class="text-gray-500 mb-8 font-semibold italic text-sm">Маргад & Намуунаа нарт зориулав</p>
+        
+        <div class="space-y-4 text-left">
+            <div>
+                <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">Таны нэр</label>
+                <input type="text" id="player-name" placeholder="Нэрээ бичээрэй..." class="w-full p-4 rounded-2xl border-2 border-rose-50 mt-1 outline-none focus:border-rose-500 transition text-lg">
+            </div>
+            <button onclick="initGame()" class="w-full bg-rose-600 text-white p-5 rounded-2xl font-bold text-xl hover:bg-rose-700 shadow-xl transition transform active:scale-95 mt-4 uppercase tracking-widest">Тоглоомыг эхлэх</button>
+        </div>
+        <p class="mt-6 text-[9px] text-gray-400 font-bold uppercase text-center">Асуулт давхцахгүй байх систем идэвхтэй</p>
+    </div>
+
+    <!-- ТОГЛООМЫН ХЭСЭГ -->
+    <div id="game-screen" class="hidden max-w-6xl w-full flex flex-col md:flex-row gap-4 md:gap-6 fade-in">
+        <div class="w-full md:w-80 bg-white/90 p-6 rounded-3xl shadow-xl order-2 md:order-1 flex flex-col">
+            <div class="flex justify-between items-center mb-4 border-b border-rose-100 pb-2">
+                <h3 class="font-bold text-rose-600 uppercase text-xs">Шагналууд:</h3>
+            </div>
+            <div id="prize-ladder" class="flex flex-col gap-1"></div>
+        </div>
+
+        <div class="flex-1 bg-white p-6 md:p-10 rounded-[2.5rem] shadow-2xl order-1 md:order-2 flex flex-col relative min-h-[550px]">
+            <div class="flex justify-between items-center mb-8">
+                <div class="flex items-center gap-3">
+                    <div class="bg-rose-50 px-4 py-2 rounded-2xl flex items-center gap-2 border border-rose-100 shadow-sm">
+                        <span class="text-xl">🛡️</span>
+                        <span id="life-count" class="font-bold text-rose-600 text-xl">1</span>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <div id="game-timer" class="text-4xl font-black text-rose-600 tabular-nums">30</div>
+                </div>
+                <div class="flex gap-2">
+                    <button id="btn-5050" onclick="use5050()" class="w-12 h-12 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center text-xl hover:bg-rose-100 shadow-sm">⚖</button>
+                    <button id="btn-ask" onclick="useAsk()" class="w-12 h-12 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center text-xl hover:bg-rose-100 shadow-sm">📞</button>
+                </div>
+            </div>
+            <div class="flex-1 flex flex-col justify-center text-center">
+                <div id="q-step-label" class="inline-block px-3 py-1 bg-rose-100 text-rose-600 rounded-full text-[10px] font-bold uppercase tracking-widest mb-4 self-center">Асуулт</div>
+                <h2 id="q-text" class="text-xl md:text-2xl font-bold text-gray-800 mb-10 leading-snug min-h-[4rem]">...</h2>
+                <div id="options-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- БАТЛАМЖ ХЭСЭГ -->
+    <div id="result-screen" class="hidden max-w-2xl w-full fade-in">
+        <div id="certificate-card" class="p-8 md:p-14 rounded-[3rem] border-8 border-double border-rose-200 shadow-2xl relative text-center">
+            <div class="fancy-font text-4xl text-rose-600 mb-1">Хайрын Саятан</div>
+            <p class="text-gray-400 uppercase tracking-[0.4em] text-[10px] font-bold mb-8">Ялагчийн Батламж</p>
+            <h1 id="result-title" class="text-2xl font-black text-gray-800 mb-4 tracking-tighter uppercase">Баяр хүргэе!</h1>
+            <p class="text-gray-600 mb-8">Хайрт <span id="final-name" class="font-bold text-rose-600 underline">...</span> та дараах эрхүүдийг хожлоо:</p>
+            <div id="won-prizes-list" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-left bg-rose-50/40 p-8 rounded-3xl border border-rose-100 mb-8"></div>
+            <div class="flex justify-between items-end mt-12">
+                <div class="text-left text-[9px] text-gray-400 font-bold uppercase leading-relaxed">
+                    <p id="final-date">Огноо: --</p>
+                </div>
+                <div class="bg-rose-600 text-white px-6 py-2 rounded-xl font-bold text-[10px] shadow-lg border-2 border-white uppercase">БАТЛАВ</div>
+            </div>
+        </div>
+        <div class="mt-10 text-center">
+            <button onclick="location.reload()" class="bg-rose-600 text-white px-12 py-4 rounded-full font-bold shadow-xl">Дахин тоглох</button>
+        </div>
+    </div>
+
+    <script>
+        // Тусгай эхлэлийн асуултууд
+        const starterQuestions = [
+            { id: 's1', q: "Маргад Намуунаа 2 хэзээ үерхсэн бэ?", a: ["9 сарын 23", "8 сарын 23", "10 сарын 23", "9 сарын 22"] },
+            { id: 's2', q: "Маргад Намуунаад хэр их хайртай вэ?", a: ["Математик тооцоолол хийх боломжгүй их", "Нарнаас их", "9999999999999 их", "Намуунаагаас их"] },
+            { id: 's3', q: "Намуунаа Маргадын юу вэ?", a: ["Амлалт нь", "Тогооч нь", "Баруун хөлийн оймс нь", "Аавынх нь том хүүгийнх нь эхнэр нь"] }
+        ];
+
+        // Ерөнхий асуултын сан
+        const generalQuestions = [
+            { id: 1, q: "АНУ-ын ерөнхийлөгч болон Дээд шүүхийн ерөнхий шүүгчээр ажиллаж байсан цорын ганц хүн?", a: ["Уильям Ховард Тафт", "Жорж Вашингтон", "Линкольн", "Мэдисон"] },
+            { id: 2, q: "Жон Ф.Кеннедийн аллагыг мөрдөн шалгах албан ёсны комиссыг юу гэж нэрлэдэг вэ?", a: ["Уоррены комисс", "ФБИ-ийн зөвлөл", "9/11 комисс", "Мөрдөх товчоо"] },
+            { id: 3, q: "маргад намуунаа - хэзээ хосууд болсон бэ?", a: ["10сарын23", "10сарын13", "9сарын23", "9сарын23"] },
+            { id: 3, q: "Мартин Лютерийг хууль бус гэж зарлаж, Хапсбургийн газар нутгийг хоёр хуваасан хаан?", a: ["V Карл", "VIII Генри", "Людовик XIV", "Фердинанд"] },
+            { id: 4, q: "АНУ-ын анхны өөрөө хөрөнгөжсөн тэрбумтан эмэгтэй хэн бэ?", a: ["Хатагтай С.Ж.Уокер", "Элизабет Арден", "Опра", "Коко Шанель"] },
+            { id: 5, q: "Византийн эзэнт гүрний 1453 онд унах үеийн хамгийн сүүлчийн эзэн хаан хэн бэ?", a: ["XI Константин Палеолог", "Юстиниан I", "Константин Великий", "Алексей I"] },
+            { id: 6, q: "Моголын эзэнт гүрний бүх хаад ямар шашин шүтдэг байсан бэ?", a: ["Ислам", "Будда", "Христ", "Хинду"] },
+            { id: 7, q: "Ариун Ромын эзэнт гүрэн нь ариун ч биш, Ромынх ч биш гэж хэн хэлсэн бэ?", a: ["Вольтер", "Наполеон", "Макиавелли", "Руссо"] },
+            { id: 8, q: "Ф.Д.Рузвельтээс 34 хоногийн өмнө эрх мэдэлд хүрч, 19 хоногийн дараа унасан удирдагч?", a: ["Адольф Гитлер", "Муссолини", "Сталин", "Черчилль"] },
+            { id: 9, q: "1964 онд Линдон Б.Жонсоны дэд ерөнхийлөгчид нэр дэвшигч хэн байсан бэ?", a: ["Хуберт Хорацио Хамфри", "Никсон", "Кеннеди", "Жонсон"] },
+            { id: 10, q: "Их хямралын үед WPA-ийг санаачлагчдын нэг, Худалдааны нарийн бичгийн дарга?", a: ["Харри Хопкинс", "Герберт Гувер", "Рузвельт", "Кейнс"] },
+            { id: 11, q: "Дэлхийн 2-р дайны үед Швед улс ямар байр суурьтай байсан бэ?", a: ["Төвийг сахисан", "Холбоотон", "Германы талд", "ЗХУ-ын талд"] },
+            { id: 12, q: "Англи-Занзибарын дайн хэр удаан үргэлжилсэн бэ?", a: ["38 минут", "2 өдөр", "5 цаг", "1 жил"] },
+            { id: 13, q: "1980 оны өвлийн олимпод АНУ-ын баг ЗХУ-ыг хожсон тоглолтыг юу гэдэг вэ?", a: ["Мөсөн дээрх гайхамшиг", "Их тулаан", "Хүйтэн дайн", "Олимпын ялалт"] },
+            { id: 14, q: "Зүрх сэтгэдэг гэж итгэдэг байсан эртний гурван соёл иргэншил юу вэ?", a: ["Египет, Грек, Хятад", "Ром, Перс, Инка", "Маяа, Ацтек, Шумер", "Вавилон, Египет, Ром"] },
+            { id: 15, q: "Эртний Ромын ямар ер бусын татвар байсан бэ?", a: ["Шээсний татвар", "Агаарын татвар", "Сахлын татвар", "Цонхны татвар"] },
+            { id: 16, q: "Анхны өндөр өсгийтийг ямар зорилгоор бүтээсэн бэ?", a: ["Морьт цэргүүд дөрөөнд хөлөө бэхлэх", "Гоёл", "Өндөр харагдах", "Ус гатлах"] },
+            { id: 17, q: "Фидель Кастрог хөнөөх оролдлогын нэг нь юунд бөмбөг нуусан байсан бэ?", a: ["Талханд", "Тамхинд", "Цүнхэнд", "Утаснд"] },
+            { id: 18, q: "Эртний Ромчууд юуг ам зайлагч болгон ашигладаг байсан бэ?", a: ["Шээс", "Дарс", "Сүү", "Цуу"] },
+            { id: 19, q: "Үхсэн хүний гар гэгддэг хөзөр барьж байгаад нас барсан хүн?", a: ["Зэрлэг Билл Хикок", "Жорж Кустер", "Буффало Билл", "Билли Кид"] },
+            { id: 20, q: "Эрх чөлөөний хөшөөний анхны өнгө ямар байсан бэ?", a: ["Зэс бор", "Ногоон", "Цагаан", "Алтан"] },
+            { id: 21, q: "Түүхэнд тэмдэглэгдсэн анхны хошигнолыг ямар соёл иргэншил зохиосон бэ?", a: ["Шумерууд", "Египетчүүд", "Грекүүд", "Ромчууд"] },
+            { id: 22, q: "АНУ-ын үндэсний шувуугаар ямар шувууг болгохыг Бенжамин Франклин хүссэн бэ?", a: ["Цацагт хяруул", "Бүргэд", "Хэрээ", "Галуу"] },
+            { id: 23, q: "Цагаан ордонд матар тэжээж байсан ерөнхийлөгч хэн бэ?", a: ["Жон Куинси Адамс", "Линкольн", "Жексон", "Рузвельт"] },
+            { id: 24, q: "Дэлхийн 2-р дайнд Цэнхэр загалмайн одонгоор шагнагдсан нохой хэн бэ?", a: ["Жулиана", "Лайка", "Хачико", "Балто"] },
+            { id: 25, q: "Хэт их интоор идсэнээс болж нас барсан гэгддэг ерөнхийлөгч?", a: ["Закари Тейлор", "Мэдисон", "Грант", "Полк"] },
+            { id: 26, q: "Гильотин (цаазын машин)-ыг анх ямар зорилгоор бүтээсэн бэ?", a: ["Хүмүүнлэг, тэгш эрхтэй цааз", "Тамлалт", "Шуурхай ажиллагаа", "Айлгах"] },
+            { id: 27, q: "Гуравдугаар сарын 15-нд (Ides of March) алагдсан Ромын удирдагч хэн бэ?", a: ["Юлий Цезарь", "Август", "Нерон", "Калигула"] },
+            { id: 28, q: "Эртний Египетийн хамгийн сүүлчийн фараон хэн бэ?", a: ["VII Клеопатра", "Нефертити", "Тутанхамон", "Рамзес II"] },
+            { id: 29, q: "Эртний Персийн эзэнт гүрний нийслэл хот юу байсан бэ?", a: ["Персеполис", "Вавилон", "Суза", "Ниневия"] },
+            { id: 30, q: "Хамгийн анхны бичиг болох шаантаг бичгийг хэн зохиосон бэ?", a: ["Шумерууд", "Египетчүүд", "Финикчүүд", "Хятадууд"] },
+            { id: 31, q: "Жад, бамбайгаар зэвсэглэсэн эртний Грекийн цэргийн жагсаалыг юу гэдэг вэ?", a: ["Фаланкс", "Легион", "Тэстудо", "Скутум"] },
+            { id: 32, q: "Саккарагийн шаталсан пирамидыг бариулсан фараон хэн бэ?", a: ["Жосер", "Хеопс", "Микерин", "Снофру"] },
+            { id: 33, q: "Домогт хааны тухай өгүүлдэг эртний Месопотамийн туульсийг юу гэдэг вэ?", a: ["Гилгамешийн тууль", "Илиада", "Одиссей", "Махабхарата"] },
+            { id: 34, q: "Бамбайгаа толгой дээгүүрээ нийлүүлж хамгаалдаг Ромын тактикийг юу гэдэг вэ?", a: ["Мэлхий (Testudo)", "Фаланкс", "Орбит", "Вэж"] },
+            { id: 35, q: "Хамгийн анхны мэдэгдэж буй хуулийн кодыг ямар соёл иргэншил гаргасан бэ?", a: ["Вавилончууд", "Ромчууд", "Грекүүд", "Египетчүүд"] },
+            { id: 36, q: "14-р зуунд Европын хүн амын гуравны нэгийг устгасан өвчин юу вэ?", a: ["Хар үхэл (Тахал)", "Холер", "Сүрьеэ", "Цэцэг"] },
+            { id: 37, q: "Дундад зууны үеийн хөлөг баатруудын ёс зүйн дүрмийг юу гэдэг байсан бэ?", a: ["Шивалери (Chivalry)", "Бушидо", "Кодекс", "Канон"] },
+            { id: 38, q: "Испанийн ихэнх хэсгийг захирч байсан дундад зууны үеийн Исламын эзэнт гүрэн?", a: ["Омейядын халифат", "Осман", "Аббасид", "Фатимид"] },
+            { id: 39, q: "Дэлхийн хамгийн эртний (1088 он) тасралтгүй үйл ажиллагаатай их сургууль?", a: ["Болоньягийн их сургууль", "Оксфорд", "Сорбонн", "Кембриж"] },
+            { id: 40, q: "Монголын эзэнт гүрний шуудан холбооны системийг юу гэж нэрлэдэг байсан бэ?", a: ["Өртөө", "Морьт холбоо", "Зурвас", "Цэг"] },
+            { id: 41, q: "1258 онд Монголчууд ямар хотыг эзлэн авч, номын санг нь устгасан бэ?", a: ["Багдад", "Дамаск", "Каир", "Константинополь"] },
+            { id: 42, q: "Япончууд Монголын довтолгоог устгасан далайн шуургыг юу гэж нэрлэдэг вэ?", a: ["Камиказе", "Цүнами", "Тайфун", "Сакура"] },
+            { id: 43, q: "Монголын эзэнт гүрний үед худалдааг хөнгөвчлөхийн тулд юу нэвтрүүлсэн бэ?", a: ["Цаасан мөнгө", "Алтан зоос", "Торгон замын татвар", "Бартер"] },
+            { id: 44, q: "Хубилай хааны үүсгэн байгуулсан Хятадын гүрэн юу вэ?", a: ["Юань гүрэн", "Мин гүрэн", "Цин гүрэн", "Сун гүрэн"] },
+            { id: 45, q: "Монголд 5 болон түүнээс дээш хүүхэдтэй эхийг хэн гэж өргөмжилдөг вэ?", a: ["Алдарт эх", "Баатар эх", "Гэгээн эх", "Ачлалт эх"] },
+            { id: 46, q: "Хубилай хааны ордонд зочилсон Венецийн аялагч хэн бэ?", a: ["Марко Поло", "Васко да Гама", "Колумб", "Магеллан"] },
+            { id: 47, q: "1274, 1281 онуудад Монголчууд аль улс руу довтолсон бэ?", a: ["Япон", "Вьетнам", "Ява", "Солонгос"] },
+            { id: 48, q: "Монгол гэдэг үг нь ямар утгатай гэж тайлбарлагддаг вэ?", a: ["Зоригт", "Мөнх", "Хөх", "Гал"] },
+            { id: 49, q: "Улаанбаатар хот ямар утгатай үг вэ?", a: ["Улаан баатар", "Их нийслэл", "Хөх хот", "Мөнх баатар"] },
+            { id: 50, q: "Хамгийн анхны Монгол бичгийг юу гэж нэрлэдэг байсан бэ?", a: ["Уйгаржин монгол бичиг", "Дөрвөлжин бичиг", "Соёмбо бичиг", "Тод бичиг"] },
+            { id: 51, q: "883-627 оны хооронд Ойрхи Дорнодыг захирч байсан эзэнт гүрэн?", a: ["Ассирийн эзэнт гүрэн", "Вавилон", "Перс", "Македон"] },
+            { id: 52, q: "1832 онд аль томоохон хот анхны хотын трамвайг ашиглалтад оруулсан бэ?", a: ["Нью-Йорк", "Лондон", "Парис", "Берлин"] },
+            { id: 53, q: "1939 оны 9-р сарын 1-нд Германд аль хоёр улс дайн зарласан бэ?", a: ["Их Британи, Франц", "АНУ, Орос", "Итали, Япон", "Польш, Чех"] },
+            { id: 54, q: "Францын хувьсгалын үеэр төрийн эргэлтээр засгийн эрхэнд гарсан хүн?", a: ["Наполеон Бонапарт", "Робеспьер", "Дантон", "Марат"] },
+            { id: 55, q: "1856 онд АНУ-ын ерөнхийлөгчөөр сонгогдсон Жеймс Бьюкенен өмнө нь хаана элчин байсан бэ?", a: ["Их Британи", "Франц", "Орос", "Герман"] },
+            { id: 56, q: "АНУ-ын тусгаар тогтнолын тунхаглалд хэзээ гарын үсэг зурсан бэ?", a: ["1776 оны 8-р сарын 2", "1776 оны 7-р сарын 4", "1783 он", "1789 он"] },
+            { id: 57, q: "АНУ Аляск мужийг аль улсаас худалдаж авсан бэ?", a: ["Орос", "Канад", "Франц", "Испани"] },
+            { id: 58, q: "Хөдөө аж ахуйгаас аж үйлдвэрийн практикт шилжсэн эрин үе?", a: ["Аж үйлдвэрийн хувьсгал", "Сэргэн мандалт", "Гэгээрэл", "Дижитал эрин"] },
+            { id: 59, q: "АНУ-ын Үндсэн хуулийн 19-р нэмэлт өөрчлөлтөөр хэнд эрх олгосон бэ?", a: ["Эмэгтэйчүүд", "Хар арьстнууд", "Залуучууд", "Иргэд"] },
+            { id: 60, q: "1492 онд Америкийг нээсэн хүн хэн бэ?", a: ["Кристофер Колумб", "Америго Веспуччи", "Магеллан", "Кабот"] },
+            { id: 61, q: "АНУ-ын Хойд болон Өмнөд бүс нутгуудын хооронд болсон дайн?", a: ["Иргэний дайн", "Дэлхийн 1-р дайн", "Вьетнам", "Солонгос"] },
+            { id: 62, q: "Эмэгтэйчүүдийн сонгуулийн эрхийг хамгийн анх олгосон улс?", a: ["Шинэ Зеланд", "АНУ", "Британи", "Норвеги"] },
+            { id: 63, q: "Берлиний хана хэдэн онд нурсан бэ?", a: ["1989 он", "1991 он", "1985 он", "1995 он"] },
+            { id: 64, q: "Түүхэнд Дофин (Dauphin) гэх цолтой удирдагчтай байсан улс?", a: ["Франц", "Испани", "Португал", "Орос"] },
+            { id: 65, q: "1439 онд Англид юуг хууль бус болгосон бэ?", a: ["Үнсэлцэх", "Тамхи татах", "Дарс уух", "Дайн хийх"] },
+            { id: 66, q: "1881 онд Доктор Альберт Саутвик юуг зохион бүтээсэн бэ?", a: ["Цахилгаан сандал", "Телефон", "Чийдэн", "Радио"] },
+            { id: 67, q: "Дэлхийн 2-р дайны өмнө Британийн зурагтаар гарсан сүүлчийн нэвтрүүлэг?", a: ["Мики Маус", "Мэдээ", "Дуурь", "Кино"] },
+            { id: 68, q: "1917 оны Оросын хувьсгалыг удирдсан Большевик намын дарга?", a: ["Владимир Ленин", "Сталин", "Троцкий", "Николай II"] },
+            { id: 69, q: "Дэлхийн хамгийн урт хугацаанд үргэлжилсэн дайн?", a: ["100 жилийн дайн", "Хүйтэн дайн", "30 жилийн дайн", "7 жилийн дайн"] },
+            { id: 70, q: "Эртний Ромын анхны хуулийн кодыг юу гэдэг байсан бэ?", a: ["Арван хоёр хүснэгт", "Хамурапи", "Юстиниан", "Магна Карта"] },
+            { id: 71, q: "Хятадын цагаан хэрмийг барьж эхэлсэн гүрэн юу вэ?", a: ["Цинь гүрэн", "Хан гүрэн", "Тан гүрэн", "Мин гүрэн"] },
+            { id: 72, q: "Нельсон Мандела хэдэн жил шоронд хоригдсон бэ?", a: ["27 жил", "10 жил", "35 жил", "15 жил"] },
+            { id: 73, q: "Че Гевара аль хувьсгалд чухал үүрэг гүйцэтгэсэн бэ?", a: ["Кубын хувьсгал", "Оросын", "Францын", "Хятадын"] },
+            { id: 74, q: "Английн хатан хаан I Виктория хэдэн жил хаанчилсан бэ?", a: ["63 жил", "50 жил", "70 жил", "45 жил"] },
+            { id: 75, q: "Европ болон Америкийн хоорондох бараа, амьтны солилцоог юу гэдэг вэ?", a: ["Колумбын солилцоо", "Торгон зам", "Атлантын худалдаа", "Мөнгөн зам"] },
+            { id: 76, q: "Африк тивийг Европын гүрнүүд хувааж авсан 1884 оны хурал?", a: ["Берлиний хурал", "Венийн конгресс", "Ялтын хурал", "Парисын"] },
+            { id: 77, q: "Эзэнт гүрний титэм дэх хамгийн үнэт эрдэнэ гэж аль колонийг нэрлэдэг байсан бэ?", a: ["Энэтхэг", "Австрали", "Канад", "Өмнөд Африк"] },
+            { id: 78, q: "ЗХУ болон АНУ-ыг цөмийн дайны ирмэгт хүргэсэн хямрал?", a: ["Кубын пуужингийн хямрал", "Суэцийн суваг", "Берлиний бүслэлт", "Вьетнам"] },
+            { id: 79, q: "Ромын эзэнт гүрэн баруун болон зүүн гэж хэдэн онд хуваагдсан бэ?", a: ["МЭ 395 он", "МЭ 476 он", "МЭ 1453 он", "МЭ 313 он"] },
+            { id: 80, q: "Эртний Египетийн бичээсийг тайлахад тусалсан олдвор юу вэ?", a: ["Розеттагийн чулуу", "Сфинкс", "Папирус", "Пирамид"] },
+            { id: 81, q: "Эртний Грекийн домогт Троя хотыг хэрхэн унагаасан бэ?", a: ["Модон морь ашиглаж", "Усан флотоор", "Бүслэлтээр", "Урвалтаар"] },
+            { id: 82, q: "Английн хаан VIII Хенри яагаад Католик сүмээс салсан бэ?", a: ["Эхнэрээсээ салахын тулд", "Татвар төлөхгүй гэж", "Дайн хийх гэж", "Шинэ шашин зохиох гэж"] },
+            { id: 83, q: "Вьетнамын дайнд АНУ-ын гол зорилго юу байсан бэ?", a: ["Коммунизмын тархалтыг зогсоох", "Газар нутаг авах", "Баялаг олборлох", "Ардчилал тогтоох"] },
+            { id: 84, q: "Югослав улс задарснаар хамгийн түрүүнд тусгаар тогтносон хоёр улс?", a: ["Словени болон Хорват", "Серби, Босни", "Македон, Черногори", "Албани, Косово"] },
+            { id: 85, q: "Хар сахал (Blackbeard) далайн дээрэмчний хөлөг онгоцны нэр?", a: ["Хатан хаан Аннагийн өшөө авалт", "Хар сувд", "Алтан буга", "Титаник"] },
+            { id: 86, q: "Гахайн булангийн довтолгооны үед АНУ-ын ерөнхийлөгч хэн байсан бэ?", a: ["Жон Ф. Кеннеди", "Эйзенхауэр", "Никсон", "Жонсон"] },
+            { id: 87, q: "Одоо үед олон улсад хамгийн өргөн хэрэглэгддэг хуанли юу вэ?", a: ["Григорийн хуанли", "Юлианы хуанли", "Сарны хуанли", "Хятад хуанли"] },
+            { id: 88, q: "Долоо хоног 7 өдөртэй байх системийг аль иргэншил зохиосон бэ?", a: ["Вавилончууд", "Египетчүүд", "Ромчууд", "Грекүүд"] },
+            { id: 89, q: "Нэг минут яагаад 60 секунд байдаг вэ?", a: ["Шумеруудын 60-тын тооллоос", "Ромын хуулиас", "Египетийн одоноос", "Грекийн математикаас"] },
+            { id: 90, q: "Христийн шашныг Ромын эзэнт гүрэнд хууль ёсны болгосон хаан?", a: ["Константин I", "Август", "Траян", "Марк Аврелий"] },
+            { id: 91, q: "Мартин Лютер ямар шашны шинэчлэлийг эхлүүлсэн бэ?", a: ["Протестант шинэчлэл", "Католик", "Ортодокс", "Англикан"] },
+            { id: 92, q: "Америкийн хувьсгалын үеэр 'Эрх чөлөө эсвэл үхэл' гэж хэн хэлсэн бэ?", a: ["Патрик Хенри", "Вашингтон", "Жефферсон", "Франклин"] },
+            { id: 93, q: "Японы алдартай самурай нарын мөрддөг байсан ёс зүйн дүрэм?", a: ["Бушидо", "Кодекс", "Канон", "Зэн"] },
+            { id: 94, q: "АНУ-ын Төв банкны системийг юу гэж нэрлэдэг вэ?", a: ["Холбооны нөөцийн систем", "Төв банк", "Долларын банк", "Улсын сан"] },
+            { id: 95, q: "Английн түүхэн дэх хамгийн богино (9 хоног) хаанчилсан хүн?", a: ["Хатагтай Жэйн Грэй", "Виктория", "I Елизабет", "Мариа I"] },
+            { id: 96, q: "1492 онд Колумбын аялалд ашиглагдсан хөлөг онгоцны нэрс?", a: ["Нина, Пинта, Санта Мариа", "Титаник", "Мэйфлауэр", "Алтан буга"] },
+            { id: 97, q: "1986 оны Чернобылийн цөмийн гамшиг одоогийн аль улсад болсон бэ?", a: ["Украин", "Орос", "Беларусь", "Польш"] },
+            { id: 98, q: "Энэтхэг улс хэдэн онд Их Британиас тусгаар тогтносон бэ?", a: ["1947 он", "1950 он", "1945 он", "1930 он"] },
+            { id: 99, q: "NAFTA хэлэлцээр хэдэн онд хүчин төгөлдөр болсон бэ?", a: ["1994 он", "1990 он", "2000 он", "1985 он"] },
+            { id: 100, q: "Дэлхийн 2-р дайны дараа аль улс Зүүн болон Баруун болон хуваагдсан бэ?", a: ["Герман", "Солонгос", "Вьетнам", "Австри"] }
+        ];
+        const prizeLadder = [
+            { lv: 1, text: "💋 Үнсүүлэх эрх", t: false }, { lv: 2, text: "🤗 Тэврүүлэх эрх", t: false },
+            { lv: 3, text: "💆‍♂️ Массаж хийлгэх эрх", t: true }, { lv: 4, text: "🚗 Ажлаас тосуулах эрх", t: false },
+            { lv: 5, text: "🍦 Гоё юм авхуулж идэх эрх", t: false }, { lv: 6, text: "🥰 Өдөржин эрхлэх эрх", t: true },
+            { lv: 7, text: "🍲 Хоол хийлгэх эрх", t: false }, { lv: 8, text: "✨ Нүүрээ арчлуулах эрх", t: false },
+            { lv: 9, text: "🌹 Болзоонд уриулах эрх", t: true }, { lv: 10, text: "⭐ Нэг хүслээ хэлэх эрх", t: true }
+        ];
+
+        let state = { name: "", step: 0, lives: 1, safePoint: 0, timer: 30, interval: null, pool: [], currentQ: null };
+
+        // Эхний асуултыг ээлжлэн сонгох логик
+        function getStarterIndex() {
+            let idx = parseInt(localStorage.getItem('mn_starter_idx') || "0");
+            localStorage.setItem('mn_starter_idx', (idx + 1) % 3);
+            return idx;
+        }
+
+        // Өмнө нь ирсэн асуултуудыг хянах
+        function getGlobalUsed() { return JSON.parse(localStorage.getItem('mn_used_ids_final') || '[]'); }
+        function saveGlobalUsed(id) {
+            let used = getGlobalUsed();
+            if(!used.includes(id)) { used.push(id); localStorage.setItem('mn_used_ids_final', JSON.stringify(used)); }
+        }
+
+        function initGame() {
+            const name = document.getElementById('player-name').value.trim();
+            if(!name) return alert("Нэрээ оруулна уу!");
+            
+            state.name = name; state.step = 0; state.lives = 1; state.safePoint = 0;
+            
+            let usedGlobally = getGlobalUsed();
+            state.pool = generalQuestions.filter(q => !usedGlobally.includes(q.id));
+            
+            if(state.pool.length < 15) { 
+                localStorage.setItem('mn_used_ids_final', JSON.stringify([]));
+                state.pool = [...generalQuestions];
+            }
+
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            renderLadder();
+            nextQuestion();
+        }
+
+        function renderLadder() {
+            const cont = document.getElementById('prize-ladder');
+            cont.innerHTML = '';
+            [...prizeLadder].reverse().forEach(p => {
+                const div = document.createElement('div');
+                div.className = `p-2 rounded-xl text-[10px] flex justify-between bg-white border border-rose-50 transition-all ${p.lv === state.step+1 ? 'prize-active' : 'text-gray-400'} ${p.t ? 'threshold' : ''}`;
+                div.innerHTML = `<span>${p.lv}. ${p.text}</span> ${p.t ? '🚩' : ''}`;
+                cont.appendChild(div);
+            });
+        }
+
+        function nextQuestion() {
+            if(state.step >= 10) return end(true);
+
+            // Алхам 0: Эхний асуулт заавал тусгай 3-ын нэг байна
+            if(state.step === 0) {
+                const sIdx = getStarterIndex();
+                state.currentQ = starterQuestions[sIdx];
+            } else {
+                if(state.pool.length === 0) return end(false);
+                let idx = Math.floor(Math.random() * state.pool.length);
+                state.currentQ = state.pool[idx];
+                state.pool.splice(idx, 1);
+                saveGlobalUsed(state.currentQ.id);
+            }
+
+            document.getElementById('q-text').innerText = state.currentQ.q;
+            document.getElementById('life-count').innerText = state.lives;
+            document.getElementById('q-step-label').innerText = `Асуулт ${state.step + 1}`;
+
+            const grid = document.getElementById('options-grid');
+            grid.innerHTML = '';
+            
+            // 0-р индекс үргэлж зөв хариулт тул холих
+            let opts = state.currentQ.a.map((t, i) => ({ t, c: i === 0 })).sort(() => Math.random() - 0.5);
+            
+            opts.forEach(o => {
+                const b = document.createElement('button');
+                b.className = "option-btn bg-white font-bold text-gray-700 shadow-sm text-sm";
+                b.innerText = o.t;
+                b.onclick = () => check(o.c, b);
+                grid.appendChild(b);
+            });
+            resetTimer();
+        }
+
+        function check(isCorrect, btn) {
+            clearInterval(state.interval);
+            const all = document.querySelectorAll('.option-btn');
+            all.forEach(b => b.disabled = true);
+
+            if(isCorrect) {
+                btn.classList.add('bg-green-500', 'text-white', 'border-green-500');
+                state.step++;
+                if(prizeLadder[state.step-1].t) state.safePoint = state.step;
+                setTimeout(() => { renderLadder(); nextQuestion(); }, 1200);
+            } else {
+                btn.classList.add('bg-red-500', 'text-white', 'border-red-500');
+                // Зөв хариултыг харуулах
+                all.forEach(b => { if(b.innerText === state.currentQ.a[0]) b.classList.add('bg-green-500', 'text-white'); });
+                
+                if(state.lives > 0) {
+                    state.lives--;
+                    document.getElementById('life-count').innerText = state.lives;
+                    setTimeout(() => { nextQuestion(); }, 2000);
+                } else {
+                    setTimeout(() => end(false), 2000);
+                }
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(state.interval);
+            state.timer = 30;
+            const el = document.getElementById('game-timer');
+            el.innerText = state.timer;
+            state.interval = setInterval(() => {
+                state.timer--;
+                el.innerText = state.timer;
+                if(state.timer <= 0) { clearInterval(state.interval); end(false); }
+            }, 1000);
+        }
+
+        function use5050() {
+            const btns = Array.from(document.querySelectorAll('.option-btn'));
+            const correct = state.currentQ.a[0];
+            let hidden = 0;
+            btns.filter(b => b.innerText !== correct).sort(() => Math.random() - 0.5).forEach(b => {
+                if(hidden < 2) { b.style.visibility = 'hidden'; hidden++; }
+            });
+            document.getElementById('btn-5050').disabled = true; 
+            document.getElementById('btn-5050').style.opacity = "0.2";
+        }
+
+        function useAsk() {
+            state.timer += 30;
+            document.getElementById('game-timer').innerText = state.timer;
+            document.getElementById('btn-ask').disabled = true; 
+            document.getElementById('btn-ask').style.opacity = "0.2";
+        }
+
+        function end(win) {
+            clearInterval(state.interval);
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+            document.getElementById('final-name').innerText = state.name;
+            document.getElementById('final-date').innerText = "Огноо: " + new Date().toLocaleDateString();
+            
+            const count = win ? 10 : state.safePoint;
+            document.getElementById('result-title').innerText = win ? "САЯТАН БОЛЛОО!" : "ТОГЛООМ ДУУСЛАА";
+            const list = document.getElementById('won-prizes-list');
+            list.innerHTML = count > 0 ? "" : "<p class='col-span-2 text-center text-gray-400 italic'>Эрх хожиж чадсангүй.</p>";
+            for(let i=0; i<count; i++) list.innerHTML += `<div class='text-[12px] font-bold'>✅ ${prizeLadder[i].text}</div>`;
+            if(win) confetti({ particleCount: 200, spread: 80, origin: { y: 0.7 } });
+        }
+    </script>
+</body>
+</html>
